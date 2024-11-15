@@ -116,12 +116,22 @@ def property_search():
         
         # Show properties after collecting enough preferences
         if len(st.session_state.messages) >= 6:  # After a few interactions
-            st.subheader("Based on your preferences, here are some properties you might like:")
-            col1, col2 = st.columns(2)
+            st.markdown("---")
+            st.subheader("🏠 Recommended Properties")
             
-            # Display properties in a grid
-            for idx, property in enumerate(SAMPLE_PROPERTIES[:4]):
-                with col1 if idx % 2 == 0 else col2:
+            # Use tabs for different views
+            tab1, tab2 = st.tabs(["Grid View", "List View"])
+            
+            with tab1:
+                # Grid view
+                col1, col2 = st.columns(2)
+                for idx, property in enumerate(SAMPLE_PROPERTIES[:4]):
+                    with col1 if idx % 2 == 0 else col2:
+                        display_property_card(property)
+            
+            with tab2:
+                # List view
+                for property in SAMPLE_PROPERTIES[:4]:
                     display_property_card(property)
 
 def main():
