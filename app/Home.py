@@ -6,6 +6,15 @@ from phi.assistant import Assistant
 from phi.llm.openai import OpenAIChat
 from phi.storage.assistant.postgres import PgAssistantStorage
 from db.session import db_url
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 
 # Data structures
 @dataclass
