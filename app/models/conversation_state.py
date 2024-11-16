@@ -43,13 +43,16 @@ class PropertyPreferences:
     
     def is_complete(self) -> bool:
         """Check if we have gathered essential preferences"""
-        return all([
+        complete = all([
             self.transaction_type is not None,
             self.property_type is not None,
             self.location is not None,
-            # Price range is optional
-            # Bedrooms is optional
         ])
+        print(f"Preferences complete: {complete}")
+        print(f"transaction_type: {self.transaction_type}")
+        print(f"property_type: {self.property_type}")
+        print(f"location: {self.location}")
+        return complete
     
     def missing_fields(self) -> list[str]:
         """Return list of missing essential fields"""
