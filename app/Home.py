@@ -12,6 +12,7 @@ from app.assistants.real_estate import get_real_estate_assistant
 from app.components.property_card import display_property_card
 from app.utils.validators import validate_email, validate_phone
 from app.models.conversation_state import PropertyPreferences
+from db.session import get_db
 
 # Configure logging
 logging.basicConfig(
@@ -71,20 +72,31 @@ def capture_lead() -> Optional[LeadData]:
             )
             
             # Store in session state
-            st.session_state["lead_data"] = lead
+            st.session_state["lead_data"] = lead.to_dict()
             return lead
             
     return None
 
 def property_search():
     """Property search conversation interface"""
-    st.header(f"Welcome back, {st.session_state['lead_data'].name}! 👋")
+    user_id = st.session_state.get('lead_data', {}).get('name', 'anonymous')
+    st.header(f"Welcome back, {user_id}! 👋")
+    
+    # Get database session
+    db = next(get_db())
+    
+    # Initialize or load preferences
+    if "preferences" not in st.session_state:
+        st.session_state.preferences = PropertyPreferences()  # Start with empty preferences
+    
+    # When preferences are updated
+    if "preferences" in st.session_state:
+        user_id = st.session_state.get('lead_data', {}).get('name', 'anonymous')
+        st.session_state.preferences.save_to_storage(user_id)
     
     # Initialize state
-    if "preferences" not in st.session_state:
-        st.session_state.preferences = PropertyPreferences()
     if "assistant" not in st.session_state:
-        st.session_state.assistant = get_real_estate_assistant(st.session_state['lead_data'].name)
+        st.session_state.assistant = get_real_estate_assistant(user_id)
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {"role": "assistant", "content": "Hi! I'm here to help you find your perfect property. What kind of property are you looking for?"}
@@ -142,7 +154,8 @@ def property_search():
                 for delta in st.session_state.assistant.run(
                     prompt,
                     stream=True,
-                    messages=messages_for_context  # Pass conversation context
+                    messages=messages_for_context,  # Pass conversation context
+                    user_id=st.session_state.get('lead_data', {}).get('name', 'anonymous')
                 ):
                     if isinstance(delta, str):
                         full_response += delta
@@ -158,6 +171,12 @@ def property_search():
                                 for key, value in preferences.items():
                                     if value is not None:
                                         setattr(st.session_state.preferences, key, value)
+                                
+                                # Save to database
+                                st.session_state.preferences.save_to_db(
+                                    db=db,
+                                    lead_id=st.session_state.get('lead_data', {}).get('name', 'anonymous')
+                                )
                                 
                                 # Show properties if preferences are complete
                                 if st.session_state.preferences.is_complete():
