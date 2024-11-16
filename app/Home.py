@@ -3,12 +3,15 @@ from datetime import datetime
 import logging
 from typing import Optional
 from dotenv import load_dotenv
+import json
+from dataclasses import asdict
 
 from app.models.lead import LeadData
 from app.models.property import SAMPLE_PROPERTIES
 from app.assistants.real_estate import get_real_estate_assistant
 from app.components.property_card import display_property_card
 from app.utils.validators import validate_email, validate_phone
+from app.models.conversation_state import PropertyPreferences
 
 # Configure logging
 logging.basicConfig(
@@ -77,11 +80,36 @@ def property_search():
     """Property search conversation interface"""
     st.header(f"Welcome back, {st.session_state['lead_data'].name}! 👋")
     
-    # Initialize chat messages if not in session state
+    # Initialize state
+    if "preferences" not in st.session_state:
+        st.session_state.preferences = PropertyPreferences()
+    if "assistant" not in st.session_state:
+        st.session_state.assistant = get_real_estate_assistant(st.session_state['lead_data'].name)
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {"role": "assistant", "content": "Hi! I'm here to help you find your perfect property. What kind of property are you looking for?"}
         ]
+    
+    # Add debug sidebar
+    with st.sidebar:
+        st.subheader("🔍 Debug Info")
+        
+        # Show PropertyPreferences
+        st.write("Property Preferences:")
+        prefs = st.session_state.preferences
+        st.info(f"""
+        - Transaction: {prefs.transaction_type or 'Not set'}
+        - Property Type: {prefs.property_type or 'Not set'}
+        - Location: {prefs.location or 'Not set'}
+        - Price Range: {f'${prefs.min_price:,.0f} - ${prefs.max_price:,.0f}' if prefs.min_price and prefs.max_price else 'Not set'}
+        - Min Bedrooms: {prefs.min_bedrooms or 'Not set'}
+        """)
+        
+        # Show simplified chat history
+        st.write("Chat History:")
+        for idx, msg in enumerate(st.session_state.messages[-5:]):  # Show last 5 messages
+            role_icon = "👤" if msg["role"] == "user" else "🤖"
+            st.text(f"{role_icon} {msg['role']}: {msg['content'][:50]}...")
     
     # Display chat messages
     for message in st.session_state.messages:
@@ -90,49 +118,86 @@ def property_search():
     
     # Get user input
     if prompt := st.chat_input("Tell me about your property preferences..."):
-        # Add user message to chat
+        # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Add previous messages for context
+        messages_for_context = []
+        for msg in st.session_state.messages[-6:]:  # Last 6 messages for context
+            messages_for_context.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+        
         with st.chat_message("user"):
             st.markdown(prompt)
         
         # Get assistant response
-        assistant = get_real_estate_assistant(st.session_state['lead_data'].name)
         with st.chat_message("assistant"):
             response_container = st.empty()
             full_response = ""
             
             try:
-                # Stream the response
-                for delta in assistant.run(prompt, stream=True):
+                # Process response with context
+                for delta in st.session_state.assistant.run(
+                    prompt,
+                    stream=True,
+                    messages=messages_for_context  # Pass conversation context
+                ):
                     if isinstance(delta, str):
                         full_response += delta
+                        if '"property_preferences":' in delta:
+                            try:
+                                # Extract and update preferences
+                                start_idx = full_response.find('{"property_preferences":')
+                                end_idx = full_response.find('}}}', start_idx) + 2
+                                prefs_json = full_response[start_idx:end_idx]
+                                preferences = json.loads(prefs_json)["property_preferences"]
+                                
+                                # Update preferences in session state
+                                for key, value in preferences.items():
+                                    if value is not None:
+                                        setattr(st.session_state.preferences, key, value)
+                                
+                                # Show properties if preferences are complete
+                                if st.session_state.preferences.is_complete():
+                                    display_matching_properties(st.session_state.preferences)
+                            except json.JSONDecodeError:
+                                pass
+                        
                         response_container.markdown(full_response + "▌")
+                
+                # Update final response
                 response_container.markdown(full_response)
-                # Save the full response to chat history
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
+                
             except Exception as e:
                 st.error(f"Error: {str(e)}")
                 return
-        
-        # Show properties after collecting enough preferences
-        if len(st.session_state.messages) >= 6:  # After a few interactions
-            st.markdown("---")
-            st.subheader("🏠 Recommended Properties")
-            
-            # Use tabs for different views
-            tab1, tab2 = st.tabs(["Grid View", "List View"])
-            
-            with tab1:
-                # Grid view
-                col1, col2 = st.columns(2)
-                for idx, property in enumerate(SAMPLE_PROPERTIES[:4]):
-                    with col1 if idx % 2 == 0 else col2:
-                        display_property_card(property)
-            
-            with tab2:
-                # List view
-                for property in SAMPLE_PROPERTIES[:4]:
+
+def display_matching_properties(prefs: PropertyPreferences):
+    """Display properties that match the current preferences"""
+    filtered_properties = filter_properties(
+        transaction_type=prefs.transaction_type,
+        property_type=prefs.property_type,
+        location=prefs.location,
+        min_price=prefs.min_price,
+        max_price=prefs.max_price,
+        min_bedrooms=prefs.min_bedrooms
+    )
+    
+    if filtered_properties:
+        st.markdown("---")
+        st.subheader("🏠 Matching Properties")
+        tab1, tab2 = st.tabs(["Grid View", "List View"])
+        with tab1:
+            col1, col2 = st.columns(2)
+            for idx, property in enumerate(filtered_properties[:4]):
+                with col1 if idx % 2 == 0 else col2:
                     display_property_card(property)
+        with tab2:
+            for property in filtered_properties[:4]:
+                display_property_card(property)
 
 def main():
     # Page config
