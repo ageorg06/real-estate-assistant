@@ -5,8 +5,22 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from db.settings import db_settings
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Database configuration
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5532")
+DB_NAME = os.getenv("DB_NAME", "ai")
+DB_USER = os.getenv("DB_USER", "ai")
+DB_PASS = os.getenv("DB_PASS", "ai")
+
+# Connection URL
+db_url = f"postgresql+psycopg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
 # Create SQLAlchemy Engine using a database URL
-db_url: str = db_settings.get_db_url()
 db_engine: Engine = create_engine(db_url, pool_pre_ping=True)
 
 # Create a SessionLocal class
