@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Optional
 import json
-from streamlit_javascript import st_javascript
+import streamlit as st
 
 @dataclass
 class PropertyPreferences:
@@ -28,19 +28,16 @@ class PropertyPreferences:
         return json.dumps(asdict(self))
     
     def save_to_storage(self, user_id: str) -> None:
-        """Save preferences to localStorage"""
+        """Save preferences to session state"""
         key = f"property_preferences_{user_id}"
-        value = self.to_json()
-        st_javascript(f"localStorage.setItem('{key}', JSON.stringify('{value}'));")
+        st.session_state[key] = self.to_json()
     
     @classmethod
     def load_from_storage(cls, user_id: str) -> "PropertyPreferences":
-        """Load preferences from localStorage"""
+        """Load preferences from session state"""
         key = f"property_preferences_{user_id}"
-        stored_data = st_javascript(f"localStorage.getItem('{key}');")
+        stored_data = st.session_state.get(key)
         if stored_data:
-            # Remove extra quotes from the stored string
-            stored_data = stored_data.strip('"')
             return cls.from_json(stored_data)
         return cls()
     

@@ -102,26 +102,8 @@ def property_search():
             {"role": "assistant", "content": "Hi! I'm here to help you find your perfect property. What kind of property are you looking for?"}
         ]
     
-    # Add debug sidebar
-    with st.sidebar:
-        st.subheader("🔍 Debug Info")
-        
-        # Show PropertyPreferences
-        st.write("Property Preferences:")
-        prefs = st.session_state.preferences
-        st.info(f"""
-        - Transaction: {prefs.transaction_type or 'Not set'}
-        - Property Type: {prefs.property_type or 'Not set'}
-        - Location: {prefs.location or 'Not set'}
-        - Price Range: {f'${prefs.min_price:,.0f} - ${prefs.max_price:,.0f}' if prefs.min_price and prefs.max_price else 'Not set'}
-        - Min Bedrooms: {prefs.min_bedrooms or 'Not set'}
-        """)
-        
-        # Show simplified chat history
-        st.write("Chat History:")
-        for idx, msg in enumerate(st.session_state.messages[-5:]):  # Show last 5 messages
-            role_icon = "👤" if msg["role"] == "user" else "🤖"
-            st.text(f"{role_icon} {msg['role']}: {msg['content'][:50]}...")
+    # Add debug sidebar with improved visualization
+    show_debug_sidebar()
     
     # Display chat messages
     for message in st.session_state.messages:
@@ -159,30 +141,36 @@ def property_search():
                 ):
                     if isinstance(delta, str):
                         full_response += delta
-                        if '"property_preferences":' in delta:
-                            try:
-                                # Extract and update preferences
-                                start_idx = full_response.find('{"property_preferences":')
-                                end_idx = full_response.find('}}}', start_idx) + 2
-                                prefs_json = full_response[start_idx:end_idx]
-                                preferences = json.loads(prefs_json)["property_preferences"]
+                        try:
+                            # Look for property preferences JSON
+                            if '"property_preferences"' in delta:
+                                start_idx = full_response.rfind('{"property_preferences":')
+                                if start_idx != -1:
+                                    # Find the closing brace of the entire JSON object
+                                    end_idx = full_response.find('}', start_idx)
+                                    end_idx = full_response.find('}', end_idx + 1) + 1  # Get the outer closing brace
+                                    
+                                    prefs_json = full_response[start_idx:end_idx]
+                                    preferences = json.loads(prefs_json)
+                                    
+                                    # Extract the inner preferences object
+                                    if "property_preferences" in preferences:
+                                        pref_data = preferences["property_preferences"]
+                                        
+                                        # Update session state preferences
+                                        for key, value in pref_data.items():
+                                            if hasattr(st.session_state.preferences, key):
+                                                setattr(st.session_state.preferences, key, value)
+                                        
+                                        # Save to storage
+                                        user_id = st.session_state.get('lead_data', {}).get('name', 'anonymous')
+                                        st.session_state.preferences.save_to_storage(user_id)
+                                        
+                                        # Force refresh
+                                        st.rerun()
                                 
-                                # Update preferences in session state
-                                for key, value in preferences.items():
-                                    if value is not None:
-                                        setattr(st.session_state.preferences, key, value)
-                                
-                                # Save to database
-                                st.session_state.preferences.save_to_db(
-                                    db=db,
-                                    lead_id=st.session_state.get('lead_data', {}).get('name', 'anonymous')
-                                )
-                                
-                                # Show properties if preferences are complete
-                                if st.session_state.preferences.is_complete():
-                                    display_matching_properties(st.session_state.preferences)
-                            except json.JSONDecodeError:
-                                pass
+                        except json.JSONDecodeError:
+                            pass
                         
                         response_container.markdown(full_response + "▌")
                 
@@ -193,6 +181,76 @@ def property_search():
             except Exception as e:
                 st.error(f"Error: {str(e)}")
                 return
+
+def show_debug_sidebar():
+    """Display debug information in sidebar"""
+    with st.sidebar:
+        st.subheader("🔍 Debug Information")
+        
+        # Current Preferences Section
+        st.markdown("### Current Preferences")
+        
+        # Get preferences from session state
+        prefs = st.session_state.preferences
+        
+        # Create columns for better organization
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Transaction Type with status indicator
+            status_color = "🟢" if prefs.transaction_type else "⚪️"
+            st.markdown(f"{status_color} **Transaction Type**")
+            st.code(prefs.transaction_type or "Not set")
+            
+            # Property Type
+            status_color = "🟢" if prefs.property_type else "⚪️"
+            st.markdown(f"{status_color} **Property Type**")
+            st.code(prefs.property_type or "Not set")
+            
+            # Location
+            status_color = "🟢" if prefs.location else "⚪️"
+            st.markdown(f"{status_color} **Location**")
+            st.code(prefs.location or "Not set")
+        
+        with col2:
+            # Price Range
+            has_price = prefs.min_price is not None and prefs.max_price is not None
+            status_color = "🟢" if has_price else "⚪️"
+            st.markdown(f"{status_color} **Price Range**")
+            if has_price:
+                st.code(f"${prefs.min_price:,.0f} - ${prefs.max_price:,.0f}")
+            else:
+                st.code("Not set")
+            
+            # Bedrooms
+            status_color = "🟢" if prefs.min_bedrooms else "⚪️"
+            st.markdown(f"{status_color} **Min Bedrooms**")
+            st.code(str(prefs.min_bedrooms or "Not set"))
+        
+        # Add a divider
+        st.divider()
+        
+        # Raw State Display
+        st.markdown("### 🔧 Raw State")
+        st.json(prefs.to_json())
+        
+        # Chat History
+        st.markdown("### 💬 Recent Messages")
+        for msg in st.session_state.messages[-5:]:
+            icon = "👤" if msg["role"] == "user" else "🤖"
+            st.markdown(
+                f"""<div style='
+                    padding: 10px;
+                    border-radius: 5px;
+                    margin: 5px 0;
+                    background-color: {"#f0f2f6" if msg["role"] == "user" else "#e8eef9"};
+                '>
+                {icon} <strong>{msg["role"].title()}</strong><br>
+                {msg["content"][:100]}{"..." if len(msg["content"]) > 100 else ""}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 def display_matching_properties(prefs: PropertyPreferences):
     """Display properties that match the current preferences"""
