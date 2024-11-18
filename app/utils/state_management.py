@@ -8,6 +8,9 @@ def initialize_session_state():
     if "appointment_data" not in st.session_state:
         st.session_state["appointment_data"] = None
         
+    if "user_info" not in st.session_state:
+        st.session_state["user_info"] = None
+        
     # Initialize property preferences
     if "transaction_type" not in st.session_state:
         st.session_state.transaction_type = None

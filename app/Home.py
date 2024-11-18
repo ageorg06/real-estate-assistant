@@ -5,7 +5,7 @@ from app.utils.state_management import initialize_session_state
 from app.pages.lead_capture import capture_lead
 from app.pages.property_search import property_search
 from app.pages.appointment_booking import book_appointment
-
+from app.utils.auth import init_google_auth, google_login
 # Configure logging
 logging.basicConfig(level=logging.WARNING, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -20,9 +20,17 @@ def main():
         layout="centered"
     )
     
-    # Initialize session state
+    # Initialize authentication and session state
+    init_google_auth()
     initialize_session_state()
     
+    # Check authentication
+    if not st.session_state.google_auth:
+        st.title("Welcome to Real Estate Assistant")
+        st.write("Please login to continue")
+        google_login()
+        return
+        
     # Show lead capture, appointment booking, or property search
     if st.session_state["lead_data"] is None:
         lead = capture_lead()

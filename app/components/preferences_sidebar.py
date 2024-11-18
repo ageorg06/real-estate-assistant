@@ -10,7 +10,18 @@ def display_preferences_sidebar():
     with st.sidebar:
         st.header("Debug Info 🔍")
         
+        # Google User Information
+        st.subheader("Google User Info")
+        user_info = st.session_state.get("user_info")
+        if user_info:
+            st.write("Name:", user_info.get("name"))
+            st.write("Email:", user_info.get("email"))
+            st.write("Picture:", f"![]({user_info.get('picture')})" if user_info.get('picture') else "No picture")
+        else:
+            st.write("No Google user info available")
+            
         # Lead Information
+        st.markdown("---")
         st.subheader("Lead Data")
         lead_data = st.session_state.get("lead_data")
         if lead_data:
