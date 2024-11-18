@@ -107,6 +107,10 @@ def property_search():
     # Display debug sidebar
     display_preferences_sidebar()
     
+    # Check if preferences are complete and display properties
+    if is_preferences_complete():
+        display_matching_properties()
+    
     # Initialize state for chat
     if "assistant" not in st.session_state:
         st.session_state.assistant = get_real_estate_assistant(user_id)
@@ -189,6 +193,11 @@ def property_search():
                                                 "Updated preferences:\n" + "\n".join(updated_fields),
                                                 icon="✅"
                                             )
+                                            
+                                            # Check if all required preferences are complete
+                                            if is_preferences_complete():
+                                                display_matching_properties()
+                                            
                                             st.rerun()
                                 except json.JSONDecodeError as e:
                                     logger.debug(f"JSON parsing error: {e}")
@@ -261,6 +270,42 @@ def get_missing_preferences() -> list[str]:
     if not st.session_state.location:
         missing.append("preferred location")
     return missing
+
+def filter_properties(
+    transaction_type: Optional[str] = None,
+    property_type: Optional[str] = None,
+    location: Optional[str] = None,  # Ignored for now
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_bedrooms: Optional[int] = None
+) -> list:
+    """
+    Filter properties based on preferences
+    Note: Location filtering is temporarily disabled
+    """
+    filtered = SAMPLE_PROPERTIES
+    
+    # Filter by transaction type
+    if transaction_type:
+        filtered = [p for p in filtered if hasattr(p, 'transaction_type') and 
+                   p.transaction_type.lower() == transaction_type.lower()]
+    
+    # Filter by property type
+    if property_type:
+        filtered = [p for p in filtered if hasattr(p, 'type') and  # Changed from property_type to type
+                   p.type.lower() == property_type.lower()]
+    
+    # Filter by price range
+    if min_price is not None:
+        filtered = [p for p in filtered if hasattr(p, 'price') and p.price >= min_price]
+    if max_price is not None:
+        filtered = [p for p in filtered if hasattr(p, 'price') and p.price <= max_price]
+    
+    # Filter by minimum bedrooms
+    if min_bedrooms is not None:
+        filtered = [p for p in filtered if hasattr(p, 'bedrooms') and p.bedrooms >= min_bedrooms]
+    
+    return filtered
 
 def main():
     # Page config
