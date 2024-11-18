@@ -14,8 +14,8 @@ from db.session import get_db
 
 # Configure minimal logging
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(levelname)s - %(message)s'
+    level=logging.WARNING,
+    format='%(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,7 @@ def property_search():
             full_response = ""
             
             try:
+                # Collect the complete response first
                 for delta in st.session_state.assistant.run(
                     prompt,
                     stream=True,
@@ -141,37 +142,64 @@ def property_search():
                 ):
                     if isinstance(delta, str):
                         full_response += delta
-                        try:
-                            if '"property_preferences"' in delta:
-                                prefs = json.loads(full_response[
-                                    full_response.rfind('{"property_preferences":'):
-                                    full_response.find('}', full_response.rfind('}')) + 1
-                                ])
-                                
-                                if "property_preferences" in prefs:
-                                    # Update session state directly
-                                    preferences_updated = False
-                                    for key, value in prefs["property_preferences"].items():
-                                        if key in ["transaction_type", "property_type", "location", 
-                                                 "min_price", "max_price", "min_bedrooms"]:
-                                            if st.session_state[key] != value:  # Only update if value changed
-                                                st.session_state[key] = value
-                                                preferences_updated = True
-                                    
-                                    if preferences_updated:
-                                        st.toast(f"Updated preference: {key} = {value}", icon="✅")
-                                        st.rerun()
-                        except json.JSONDecodeError:
-                            pass
-                        
                         response_container.markdown(full_response + "▌")
                 
+                # Update the final response
                 response_container.markdown(full_response)
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
                 
+                # Now process the complete response for preferences
+                if '"property_preferences"' in full_response:
+                    try:
+                        # Find the complete JSON object
+                        json_start = full_response.find('{"property_preferences":')
+                        if json_start != -1:
+                            # Count braces to find the matching closing brace
+                            brace_count = 0
+                            json_end = -1
+                            for i in range(json_start, len(full_response)):
+                                if full_response[i] == '{':
+                                    brace_count += 1
+                                elif full_response[i] == '}':
+                                    brace_count -= 1
+                                    if brace_count == 0:
+                                        json_end = i + 1
+                                        break
+                            
+                            if json_end != -1:
+                                prefs_json = full_response[json_start:json_end]
+                                logger.debug(f"Extracted JSON: {prefs_json}")
+                                
+                                try:
+                                    prefs = json.loads(prefs_json)
+                                    if "property_preferences" in prefs:
+                                        updated_fields = []
+                                        for key, value in prefs["property_preferences"].items():
+                                            if key in ["transaction_type", "property_type", "location", 
+                                                     "min_price", "max_price", "min_bedrooms"]:
+                                                if st.session_state[key] != value:  # Only update if value changed
+                                                    st.session_state[key] = value
+                                                    updated_fields.append(f"{key}: {value}")
+                                        
+                                        if updated_fields:
+                                            logger.debug("Updated preferences:")
+                                            for field in updated_fields:
+                                                logger.debug(f"- {field}")
+                                            st.toast(
+                                                "Updated preferences:\n" + "\n".join(updated_fields),
+                                                icon="✅"
+                                            )
+                                            st.rerun()
+                                except json.JSONDecodeError as e:
+                                    logger.debug(f"JSON parsing error: {e}")
+                                    logger.debug(f"Problematic JSON string: {prefs_json}")
+                    except Exception as e:
+                        logger.debug(f"Error processing preferences: {e}")
+                
             except Exception as e:
                 st.error("An error occurred while processing your request.")
-                
+                logger.debug(f"Request error: {e}")
+
 def display_matching_properties():
     """Display properties that match the current preferences"""
     filtered_properties = filter_properties(
