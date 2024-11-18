@@ -1,68 +1,39 @@
 import streamlit as st
-from app.utils.property_filters import filter_properties
-from app.components.property_card import display_property_card
+from datetime import datetime
 
-def is_preferences_complete() -> bool:
-    """Check if essential preferences are complete"""
-    return all([
-        st.session_state.transaction_type is not None,
-        st.session_state.property_type is not None,
-        st.session_state.location is not None,
-    ])
-
-def get_missing_preferences() -> list[str]:
-    """Return list of missing essential fields"""
-    missing = []
-    if not st.session_state.transaction_type:
-        missing.append("transaction type (buy or rent)")
-    if not st.session_state.property_type:
-        missing.append("property type (house, apartment, etc)")
-    if not st.session_state.location:
-        missing.append("preferred location")
-    return missing
+def format_datetime(dt: datetime) -> str:
+    """Format datetime for display"""
+    return dt.strftime("%Y-%m-%d %H:%M")
 
 def display_preferences_sidebar():
-    """Display property preferences in the sidebar"""
+    """Display lead and appointment data in the sidebar"""
     with st.sidebar:
-        st.header("Debug: Property Preferences 🔍")
+        st.header("Debug Info 🔍")
         
-        st.subheader("Required Fields")
-        st.write("Transaction Type:", st.session_state.transaction_type)
-        st.write("Property Type:", st.session_state.property_type)
-        st.write("Location:", st.session_state.location)
-        
-        st.subheader("Optional Fields")
-        st.write("Min Price:", st.session_state.min_price)
-        st.write("Max Price:", st.session_state.max_price)
-        st.write("Min Bedrooms:", st.session_state.min_bedrooms)
-        
-        st.markdown("---")
-        st.subheader("Status")
-        if is_preferences_complete():
-            st.success("All required fields are set! ✅")
+        # Lead Information
+        st.subheader("Lead Data")
+        lead_data = st.session_state.get("lead_data")
+        if lead_data:
+            st.write("Name:", lead_data.get("name"))
+            st.write("Contact:", lead_data.get("contact"))
+            st.write("Contact Type:", lead_data.get("contact_type"))
+            if created_at := lead_data.get("created_at"):
+                st.write("Created:", format_datetime(created_at))
         else:
-            st.warning("Missing fields: " + ", ".join(get_missing_preferences()))
-
-def display_matching_properties():
-    """Display properties that match current preferences"""
-    filtered_properties = filter_properties(
-        transaction_type=st.session_state.transaction_type,
-        property_type=st.session_state.property_type,
-        location=st.session_state.location,
-        min_price=st.session_state.min_price,
-        max_price=st.session_state.max_price,
-        min_bedrooms=st.session_state.min_bedrooms
-    )
-    
-    if filtered_properties:
+            st.write("No lead data available")
+            
+        # Appointment Information
         st.markdown("---")
-        st.subheader("🏠 Matching Properties")
-        tab1, tab2 = st.tabs(["Grid View", "List View"])
-        with tab1:
-            col1, col2 = st.columns(2)
-            for idx, property in enumerate(filtered_properties[:4]):
-                with col1 if idx % 2 == 0 else col2:
-                    display_property_card(property)
-        with tab2:
-            for property in filtered_properties[:4]:
-                display_property_card(property)
+        st.subheader("Appointment Data")
+        appointment_data = st.session_state.get("appointment_data")
+        if appointment_data:
+            if appointment_data.get("skipped"):
+                st.write("Status: Skipped")
+            else:
+                st.write("Date:", format_datetime(appointment_data.get("date")))
+                st.write("Time Slot:", appointment_data.get("time_slot"))
+                st.write("Meeting Type:", appointment_data.get("meeting_type"))
+                if notes := appointment_data.get("notes"):
+                    st.write("Notes:", notes)
+        else:
+            st.write("No appointment data available")

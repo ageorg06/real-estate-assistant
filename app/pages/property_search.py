@@ -1,6 +1,7 @@
 import streamlit as st
-from app.components.preferences_sidebar import display_preferences_sidebar, is_preferences_complete, display_matching_properties
+from app.components.preferences_sidebar import display_preferences_sidebar
 from app.components.chat_interface import initialize_chat, display_chat_interface
+from app.utils.preferences import is_preferences_complete, display_matching_properties
 
 def property_search():
     """Property search page with chat interface"""

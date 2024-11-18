@@ -1,9 +1,12 @@
 import streamlit as st
 
 def initialize_session_state():
-    """Initialize all session state variables"""
+    """Initialize session state variables"""
     if "lead_data" not in st.session_state:
         st.session_state["lead_data"] = None
+        
+    if "appointment_data" not in st.session_state:
+        st.session_state["appointment_data"] = None
         
     # Initialize property preferences
     if "transaction_type" not in st.session_state:

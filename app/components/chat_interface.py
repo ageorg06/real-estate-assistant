@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import logging
 from app.assistants.real_estate import get_real_estate_assistant
-from app.components.preferences_sidebar import is_preferences_complete, display_matching_properties
+from app.utils.preferences import is_preferences_complete, display_matching_properties
 
 logger = logging.getLogger(__name__)
 
