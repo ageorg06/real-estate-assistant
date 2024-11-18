@@ -4,19 +4,17 @@ import logging
 from typing import Optional
 from dotenv import load_dotenv
 import json
-from dataclasses import asdict
 
 from app.models.lead import LeadData
 from app.models.property import SAMPLE_PROPERTIES
 from app.assistants.real_estate import get_real_estate_assistant
 from app.components.property_card import display_property_card
 from app.utils.validators import validate_email, validate_phone
-from app.models.conversation_state import PropertyPreferences
 from db.session import get_db
 
 # Configure minimal logging
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.DEBUG,
     format='%(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -77,16 +75,39 @@ def capture_lead() -> Optional[LeadData]:
             
     return None
 
+def display_preferences_sidebar():
+    """Display property preferences in the sidebar for debugging"""
+    with st.sidebar:
+        st.header("Debug: Property Preferences 🔍")
+        
+        # Display all preferences with their current values
+        st.subheader("Required Fields")
+        st.write("Transaction Type:", st.session_state.transaction_type)
+        st.write("Property Type:", st.session_state.property_type)
+        st.write("Location:", st.session_state.location)
+        
+        st.subheader("Optional Fields")
+        st.write("Min Price:", st.session_state.min_price)
+        st.write("Max Price:", st.session_state.max_price)
+        st.write("Min Bedrooms:", st.session_state.min_bedrooms)
+        
+        # Add completion status
+        st.markdown("---")
+        st.subheader("Status")
+        if is_preferences_complete():
+            st.success("All required fields are set! ✅")
+        else:
+            st.warning("Missing fields: " + ", ".join(get_missing_preferences()))
+
 def property_search():
     """Property search conversation interface"""
     user_id = st.session_state.get('lead_data', {}).get('name', 'anonymous')
     st.header(f"Welcome back, {user_id}! 👋")
     
-    # Initialize or load preferences
-    if "preferences" not in st.session_state:
-        st.session_state.preferences = PropertyPreferences()
+    # Display debug sidebar
+    display_preferences_sidebar()
     
-    # Initialize state
+    # Initialize state for chat
     if "assistant" not in st.session_state:
         st.session_state.assistant = get_real_estate_assistant(user_id)
     if "messages" not in st.session_state:
@@ -128,11 +149,18 @@ def property_search():
                                 ])
                                 
                                 if "property_preferences" in prefs:
+                                    # Update session state directly
+                                    preferences_updated = False
                                     for key, value in prefs["property_preferences"].items():
-                                        if hasattr(st.session_state.preferences, key):
-                                            setattr(st.session_state.preferences, key, value)
-                                    st.session_state.preferences.save_to_storage(user_id)
-                                    st.rerun()
+                                        if key in ["transaction_type", "property_type", "location", 
+                                                 "min_price", "max_price", "min_bedrooms"]:
+                                            if st.session_state[key] != value:  # Only update if value changed
+                                                st.session_state[key] = value
+                                                preferences_updated = True
+                                    
+                                    if preferences_updated:
+                                        st.toast(f"Updated preference: {key} = {value}", icon="✅")
+                                        st.rerun()
                         except json.JSONDecodeError:
                             pass
                         
@@ -143,16 +171,16 @@ def property_search():
                 
             except Exception as e:
                 st.error("An error occurred while processing your request.")
-
-def display_matching_properties(prefs: PropertyPreferences):
+                
+def display_matching_properties():
     """Display properties that match the current preferences"""
     filtered_properties = filter_properties(
-        transaction_type=prefs.transaction_type,
-        property_type=prefs.property_type,
-        location=prefs.location,
-        min_price=prefs.min_price,
-        max_price=prefs.max_price,
-        min_bedrooms=prefs.min_bedrooms
+        transaction_type=st.session_state.transaction_type,
+        property_type=st.session_state.property_type,
+        location=st.session_state.location,
+        min_price=st.session_state.min_price,
+        max_price=st.session_state.max_price,
+        min_bedrooms=st.session_state.min_bedrooms
     )
     
     if filtered_properties:
@@ -168,6 +196,44 @@ def display_matching_properties(prefs: PropertyPreferences):
             for property in filtered_properties[:4]:
                 display_property_card(property)
 
+def initialize_property_preferences():
+    """Initialize property preferences in session state if they don't exist"""
+    # Required fields
+    if "transaction_type" not in st.session_state:
+        st.session_state.transaction_type = None
+    if "property_type" not in st.session_state:
+        st.session_state.property_type = None
+    if "location" not in st.session_state:
+        st.session_state.location = None
+        
+    # Optional fields
+    if "min_price" not in st.session_state:
+        st.session_state.min_price = None
+    if "max_price" not in st.session_state:
+        st.session_state.max_price = None
+    if "min_bedrooms" not in st.session_state:
+        st.session_state.min_bedrooms = None
+
+def is_preferences_complete() -> bool:
+    """Check if we have gathered essential preferences"""
+    complete = all([
+        st.session_state.transaction_type is not None,
+        st.session_state.property_type is not None,
+        st.session_state.location is not None,
+    ])
+    return complete
+
+def get_missing_preferences() -> list[str]:
+    """Return list of missing essential fields"""
+    missing = []
+    if not st.session_state.transaction_type:
+        missing.append("transaction type (buy or rent)")
+    if not st.session_state.property_type:
+        missing.append("property type (house, apartment, etc)")
+    if not st.session_state.location:
+        missing.append("preferred location")
+    return missing
+
 def main():
     # Page config
     st.set_page_config(
@@ -179,6 +245,9 @@ def main():
     # Initialize session state
     if "lead_data" not in st.session_state:
         st.session_state["lead_data"] = None
+        
+    # Initialize property preferences
+    initialize_property_preferences()
         
     # Show lead capture if no lead data
     if st.session_state["lead_data"] is None:

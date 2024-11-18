@@ -4,7 +4,6 @@ from phi.llm.openai import OpenAIChat
 from phi.storage.assistant.postgres import PgAssistantStorage
 from db.session import db_url
 from typing import Optional
-from app.models.conversation_state import PropertyPreferences
 from app.models.property import filter_properties
 
 # Initialize storage
