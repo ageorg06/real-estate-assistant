@@ -24,13 +24,6 @@ def main():
     init_google_auth()
     initialize_session_state()
     
-    # Check authentication
-    if not st.session_state.google_auth:
-        st.title("Welcome to Real Estate Assistant")
-        st.write("Please login to continue")
-        google_login()
-        return
-        
     # Show lead capture, appointment booking, or property search
     if st.session_state["lead_data"] is None:
         lead = capture_lead()

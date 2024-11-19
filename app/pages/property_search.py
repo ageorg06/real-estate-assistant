@@ -6,7 +6,7 @@ from app.utils.preferences import is_preferences_complete, display_matching_prop
 def property_search():
     """Property search page with chat interface"""
     user_id = st.session_state.get('lead_data', {}).get('name', 'anonymous')
-    st.header(f"Welcome back, {user_id}! 👋")
+    st.header(f"🏠 Let's find your dream property, {user_id}! ")
     
     # Display debug sidebar
     display_preferences_sidebar()
