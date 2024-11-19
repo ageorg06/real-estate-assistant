@@ -44,7 +44,7 @@ def display_preferences_sidebar():
                             
                             # Title and Price
                             st.markdown(f"#### {property.title}")
-                            st.markdown(f"**${property.price:,.2f}**")
+                            st.markdown(f"**€{property.price:,.2f}**")
                             
                             # Basic Info
                             st.markdown(f"📍 {property.location}")

@@ -4,7 +4,7 @@ from phi.llm.openai import OpenAIChat
 from phi.storage.assistant.postgres import PgAssistantStorage
 from db.session import db_url
 from typing import Optional
-from app.models.property import filter_properties
+from app.utils.property_filters import filter_properties
 
 # Initialize storage
 real_estate_storage = PgAssistantStorage(
