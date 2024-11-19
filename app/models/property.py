@@ -37,8 +37,8 @@ PROPERTY_TYPES = {
     "apartment": {
         "min_price_rent": 500,
         "max_price_rent": 3000,
-        "min_price_buy": 120000,
-        "max_price_buy": 500000,
+        "min_price_buy": 190000,
+        "max_price_buy": 300000,
         "min_size": 50,
         "max_size": 200,
         "titles": ["Modern {} Apartment", "Luxury {} Flat", "Urban {} Apartment", 
@@ -47,8 +47,8 @@ PROPERTY_TYPES = {
     "house": {
         "min_price_rent": 1000,
         "max_price_rent": 5000,
-        "min_price_buy": 250000,
-        "max_price_buy": 1500000,
+        "min_price_buy": 220000,
+        "max_price_buy": 400000,
         "min_size": 120,
         "max_size": 400,
         "titles": ["Spacious {} Villa", "Family {} Home", "Detached {} House", 
@@ -57,7 +57,7 @@ PROPERTY_TYPES = {
     "studio": {
         "min_price_rent": 400,
         "max_price_rent": 1200,
-        "min_price_buy": 80000,
+        "min_price_buy": 120000,
         "max_price_buy": 200000,
         "min_size": 30,
         "max_size": 60,
@@ -135,6 +135,7 @@ def generate_sample_properties(count: int = 100) -> List[Property]:
         if transaction_type == "rent":
             price = round(uniform(type_info["min_price_rent"], type_info["max_price_rent"]), -1)
         else:
+            # Round to nearest thousand for sale prices
             price = round(uniform(type_info["min_price_buy"], type_info["max_price_buy"]), -3)
         
         # Generate features

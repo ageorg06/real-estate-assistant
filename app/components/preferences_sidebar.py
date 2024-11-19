@@ -7,6 +7,44 @@ from app.utils.property_filters import filter_properties
 def display_preferences_sidebar():
     """Display property cards in the sidebar"""
     with st.sidebar:
+        # Display current preferences
+        st.header("Your Preferences 🎯")
+        
+        if any([
+            st.session_state.transaction_type,
+            st.session_state.property_type,
+            st.session_state.location,
+            st.session_state.min_price,
+            st.session_state.max_price,
+            st.session_state.min_bedrooms
+        ]):
+            # Create a formatted display of current preferences
+            if st.session_state.transaction_type:
+                st.markdown(f"🔄 **Transaction:** {st.session_state.transaction_type.capitalize()}")
+            
+            if st.session_state.property_type:
+                st.markdown(f"🏠 **Property Type:** {st.session_state.property_type.capitalize()}")
+            
+            if st.session_state.location:
+                st.markdown(f"📍 **Location:** {st.session_state.location}")
+            
+            if st.session_state.min_price or st.session_state.max_price:
+                price_range = []
+                if st.session_state.min_price:
+                    price_range.append(f"€{st.session_state.min_price:,.2f}")
+                if st.session_state.max_price:
+                    price_range.append(f"€{st.session_state.max_price:,.2f}")
+                st.markdown(f"💶 **Price Range:** {' - '.join(price_range)}")
+            
+            if st.session_state.min_bedrooms:
+                st.markdown(f"🛏️ **Min Bedrooms:** {st.session_state.min_bedrooms}")
+            
+            st.markdown("---")
+        else:
+            st.info("Start chatting to set your preferences!")
+            st.markdown("---")
+
+        # Original matching properties section
         st.header("Matching Properties 🏠")
         
         # Check if preferences are complete and filter properties
