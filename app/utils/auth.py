@@ -12,7 +12,7 @@ CLIENT_CONFIG = {
         "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": [os.getenv("REDIRECT_URI", "http://localhost:8501")]
+        "redirect_uris": [os.getenv("REDIRECT_URI", "http://localhost:8502")]
     }
 }
 
@@ -35,7 +35,7 @@ def google_login():
     )
     
     # Get the current URL
-    redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:8501")
+    redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:8502")
     
     # Explicitly set the redirect URI
     flow.redirect_uri = redirect_uri
@@ -62,7 +62,7 @@ def handle_oauth_callback(code: str):
             state=st.session_state.get('google_auth_state', '')
         )
         
-        flow.redirect_uri = st.session_state.get('oauth_redirect_uri', os.getenv("REDIRECT_URI", "http://localhost:8501"))
+        flow.redirect_uri = st.session_state.get('oauth_redirect_uri', os.getenv("REDIRECT_URI", "http://localhost:8502"))
         
         flow.fetch_token(code=code)
         credentials = flow.credentials

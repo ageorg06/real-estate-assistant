@@ -1,50 +1,66 @@
 import streamlit as st
-from datetime import datetime
-
-def format_datetime(dt: datetime) -> str:
-    """Format datetime for display"""
-    return dt.strftime("%Y-%m-%d %H:%M")
+from app.models.property import Property
+from app.components.property_card import display_property_card
+from app.utils.preferences import is_preferences_complete
+from app.utils.property_filters import filter_properties
 
 def display_preferences_sidebar():
-    """Display lead and appointment data in the sidebar"""
+    """Display property cards in the sidebar"""
     with st.sidebar:
-        st.header("Debug Info 🔍")
+        st.header("Matching Properties 🏠")
         
-        # Google User Information
-        st.subheader("Google User Info")
-        user_info = st.session_state.get("user_info")
-        if user_info:
-            st.write("Name:", user_info.get("name"))
-            st.write("Email:", user_info.get("email"))
-            st.write("Picture:", f"![]({user_info.get('picture')})" if user_info.get('picture') else "No picture")
-        else:
-            st.write("No Google user info available")
+        # Check if preferences are complete and filter properties
+        if is_preferences_complete():
+            properties = filter_properties(
+                transaction_type=st.session_state.transaction_type,
+                property_type=st.session_state.property_type,
+                location=st.session_state.location,
+                min_price=st.session_state.min_price,
+                max_price=st.session_state.max_price,
+                min_bedrooms=st.session_state.min_bedrooms
+            )
             
-        # Lead Information
-        st.markdown("---")
-        st.subheader("Lead Data")
-        lead_data = st.session_state.get("lead_data")
-        if lead_data:
-            st.write("Name:", lead_data.get("name"))
-            st.write("Contact:", lead_data.get("contact"))
-            st.write("Contact Type:", lead_data.get("contact_type"))
-            if created_at := lead_data.get("created_at"):
-                st.write("Created:", format_datetime(created_at))
-        else:
-            st.write("No lead data available")
-            
-        # Appointment Information
-        st.markdown("---")
-        st.subheader("Appointment Data")
-        appointment_data = st.session_state.get("appointment_data")
-        if appointment_data:
-            if appointment_data.get("skipped"):
-                st.write("Status: Skipped")
+            if properties:
+                for property in properties:
+                    with st.container():
+                        st.markdown("""
+                            <style>
+                            .sidebar-property-card {
+                                border: 1px solid #ddd;
+                                border-radius: 10px;
+                                padding: 0.5rem;
+                                margin-bottom: 0.5rem;
+                                background-color: white;
+                                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                        
+                        with st.container():
+                            st.markdown('<div class="sidebar-property-card">', unsafe_allow_html=True)
+                            
+                            # Image
+                            st.image(property.image_url, use_column_width=True)
+                            
+                            # Title and Price
+                            st.markdown(f"#### {property.title}")
+                            st.markdown(f"**${property.price:,.2f}**")
+                            
+                            # Basic Info
+                            st.markdown(f"📍 {property.location}")
+                            st.markdown(f"🏠 {property.type.capitalize()}")
+                            st.markdown(f"🛏️ {property.bedrooms} beds • 🚿 {property.bathrooms} baths")
+                            
+                            # View Details button
+                            with st.expander("View Details"):
+                                st.write(property.description)
+                                st.markdown("**Features:**")
+                                for feature, value in property.features.items():
+                                    if value:
+                                        st.markdown(f"✓ {feature.capitalize()}")
+                            
+                            st.markdown('</div>', unsafe_allow_html=True)
             else:
-                st.write("Date:", format_datetime(appointment_data.get("date")))
-                st.write("Time Slot:", appointment_data.get("time_slot"))
-                st.write("Meeting Type:", appointment_data.get("meeting_type"))
-                if notes := appointment_data.get("notes"):
-                    st.write("Notes:", notes)
+                st.info("No properties match your current preferences.")
         else:
-            st.write("No appointment data available")
+            st.info("Complete your preferences to see matching properties.")
