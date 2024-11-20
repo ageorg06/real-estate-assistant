@@ -3,6 +3,7 @@ import json
 import logging
 from app.assistants.real_estate import get_real_estate_assistant
 from app.utils.preferences import is_preferences_complete, display_matching_properties
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +16,13 @@ def initialize_chat(user_id: str):
             {"role": "assistant", "content": "Hi! I'm here to help you find your perfect property. What kind of property are you looking for?"}
         ]
 
-def process_preferences_json(json_text: str) -> bool:
-    """Process JSON preferences from assistant response"""
+def process_preferences_json(json_text: str) -> tuple[bool, str, Optional[str]]:
+    """Process JSON preferences from assistant response and return (has_json, message, json_str)"""
     try:
-        json_start = json_text.find('{"property_preferences":')
+        # Look for JSON object anywhere in the text
+        json_start = json_text.find('{')
         if json_start == -1:
-            return False
+            return False, json_text, None
             
         # Find complete JSON object
         brace_count = 0
@@ -35,17 +37,23 @@ def process_preferences_json(json_text: str) -> bool:
                     break
         
         if json_end == -1:
-            return False
+            return False, json_text, None
             
-        prefs_json = json_text[json_start:json_end]
-        prefs = json.loads(prefs_json)
+        # Split message and JSON
+        message = json_text[:json_start].strip()
+        json_str = json_text[json_start:json_end].strip()
+        
+        try:
+            prefs = json.loads(json_str)
+        except json.JSONDecodeError:
+            return False, json_text, None
         
         if "property_preferences" in prefs:
             updated_fields = []
             for key, value in prefs["property_preferences"].items():
                 if key in ["transaction_type", "property_type", "location", 
                          "min_price", "max_price", "min_bedrooms"]:
-                    if st.session_state[key] != value:
+                    if st.session_state.get(key) != value:
                         st.session_state[key] = value
                         updated_fields.append(f"{key}: {value}")
             
@@ -54,17 +62,19 @@ def process_preferences_json(json_text: str) -> bool:
                     "Updated preferences:\n" + "\n".join(updated_fields),
                     icon="✅"
                 )
-                return True
+                
+            return True, message, json_str
                 
     except Exception as e:
         logger.debug(f"Error processing preferences: {e}")
-    return False
+    return False, json_text, None
 
 def display_chat_interface():
     """Display and handle chat interface"""
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            if message.get("content"):
+                st.markdown(message["content"])
     
     if prompt := st.chat_input("Tell me about your property preferences..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -87,14 +97,26 @@ def display_chat_interface():
                         full_response += delta
                         response_container.markdown(full_response + "▌")
                 
-                response_container.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                # Process message and JSON separately but only display message
+                has_json, message, json_str = process_preferences_json(full_response)
+                if has_json:
+                    if message:  # Only update message if we have conversational content
+                        response_container.markdown(message)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": message if message else None,
+                        "json": json_str  # Keep JSON in session state but don't display
+                    })
+                else:
+                    response_container.markdown(full_response)
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": full_response
+                    })
                 
-                if '"property_preferences"' in full_response:
-                    if process_preferences_json(full_response):
-                        if is_preferences_complete():
-                            display_matching_properties()
-                        st.rerun()
+                if has_json and is_preferences_complete():
+                    display_matching_properties()
+                    st.rerun()
                         
             except Exception as e:
                 st.error("An error occurred while processing your request.")
