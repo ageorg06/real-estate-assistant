@@ -19,12 +19,11 @@ def get_missing_preferences() -> list[str]:
         missing.append("preferred location")
     return missing
 
-def display_matching_properties():
-    """Display matching properties based on preferences"""
+def get_matching_properties():
+    """Get matching properties based on preferences"""
     from app.utils.property_filters import filter_properties
-    from app.components.property_card import display_property_card
     
-    properties = filter_properties(
+    return filter_properties(
         transaction_type=st.session_state.transaction_type,
         property_type=st.session_state.property_type,
         location=st.session_state.location,
@@ -32,6 +31,12 @@ def display_matching_properties():
         max_price=st.session_state.max_price,
         min_bedrooms=st.session_state.min_bedrooms
     )
+
+def display_matching_properties():
+    """Display matching properties based on preferences"""
+    from app.components.property_card import display_property_card
+    
+    properties = get_matching_properties()
     
     if properties:
         st.subheader("🏠 Matching Properties")
