@@ -8,7 +8,7 @@ def property_search():
     st.header(f"🏠 Let's find your dream property, {user_id}! ")
     
     # Display sidebar with property matches
-    display_preferences_sidebar()
+    # display_preferences_sidebar() # The sidebar is not needed for the property search
     
     # Initialize and display chat interface
     initialize_chat(user_id)

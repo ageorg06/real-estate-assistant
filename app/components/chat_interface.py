@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import logging
 from app.assistants.real_estate import get_real_estate_assistant
-from app.utils.preferences import is_preferences_complete, display_matching_properties
+from app.utils.preferences import is_preferences_complete, display_matching_properties, get_matching_properties
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,8 @@ def initialize_chat(user_id: str):
         st.session_state.messages = [
             {"role": "assistant", "content": "Hi! I'm here to help you find your perfect property. What kind of property are you looking for?"}
         ]
+    if "current_properties" not in st.session_state:
+        st.session_state.current_properties = None
 
 def process_preferences_json(json_text: str) -> tuple[bool, str, Optional[str]]:
     """Process JSON preferences from assistant response and return (has_json, message, json_str)"""
@@ -71,16 +73,18 @@ def process_preferences_json(json_text: str) -> tuple[bool, str, Optional[str]]:
 
 def display_chat_interface():
     """Display and handle chat interface"""
+    # First display current properties if they exist
+    if st.session_state.current_properties:
+        with st.chat_message("assistant"):
+            st.markdown("### 🏠 Here are some properties that match your preferences:")
+            from app.components.property_carousel import display_property_carousel
+            display_property_carousel(st.session_state.current_properties)
+    
+    # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             if message.get("content"):
                 st.markdown(message["content"])
-            # Display properties if they exist in the message
-            if message.get("properties"):
-                from app.components.property_card import display_property_card
-                st.markdown("### 🏠 Here are some properties that match your preferences:")
-                for property in message["properties"]:
-                    display_property_card(property)
     
     if prompt := st.chat_input("Tell me about your property preferences..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -101,7 +105,6 @@ def display_chat_interface():
                 ):
                     if isinstance(delta, str):
                         full_response += delta
-                        response_container.markdown(full_response + "▌")
                 
                 # Process message and JSON separately but only display message
                 has_json, message, json_str = process_preferences_json(full_response)
@@ -112,30 +115,22 @@ def display_chat_interface():
                     message_data = {
                         "role": "assistant",
                         "content": message if message else None,
-                        "json": json_str  # Keep JSON in session state but don't display
+                        "json": json_str
                     }
                     
-                    # If preferences are complete, get and display matching properties
+                    # If preferences are complete, update properties
                     if is_preferences_complete():
-                        properties = display_matching_properties()
+                        properties = get_matching_properties()
                         if properties:
+                            st.session_state.current_properties = properties
                             message_data["properties"] = properties
-                            response_container.empty()  # Clear previous response
-                            with st.chat_message("assistant"):
-                                st.markdown(message if message else "")
-                                st.markdown("### 🏠 Here are some properties that match your preferences:")
-                                from app.components.property_card import display_property_card
-                                for property in properties:
-                                    display_property_card(property)
                     
                     st.session_state.messages.append(message_data)
                 else:
                     response_container.markdown(full_response)
                     st.session_state.messages.append({
-                        "role": "assistant", 
+                        "role": "assistant",
                         "content": full_response
                     })
-                        
             except Exception as e:
-                st.error("An error occurred while processing your request.")
-                logger.debug(f"Request error: {e}")
+                st.error(f"Error: {str(e)}")
