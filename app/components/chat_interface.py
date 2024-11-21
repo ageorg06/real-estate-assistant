@@ -74,6 +74,10 @@ def process_preferences_json(json_text: str) -> tuple[bool, str, Optional[str]]:
 
 def display_chat_interface():
     """Display and handle chat interface"""
+    # Initialize carousel visibility state if not present
+    if "show_properties" not in st.session_state:
+        st.session_state.show_properties = True
+    
     # Display chat messages first
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -133,6 +137,18 @@ def display_chat_interface():
     # Display property carousel at the bottom if properties exist
     if st.session_state.current_properties:
         st.markdown("---")  # Add a visual separator
-        with st.container():
+        
+        # Add toggle for carousel visibility
+        col1, col2 = st.columns([10, 2])
+        with col1:
             st.markdown("### 🏠 Matching Properties")
-            display_property_carousel(st.session_state.current_properties)
+        with col2:
+            st.session_state.show_properties = st.toggle(
+                "Show Properties",
+                value=st.session_state.show_properties,
+                key="property_toggle"
+            )
+        
+        if st.session_state.show_properties:
+            with st.container():
+                display_property_carousel(st.session_state.current_properties)

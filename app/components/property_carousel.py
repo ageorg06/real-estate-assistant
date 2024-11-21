@@ -32,11 +32,22 @@ def display_property_carousel(properties: List[Property]):
                 margin: 1rem 0;
                 background-color: white;
             }
+            .property-image {
+                max-height: 300px;
+                object-fit: cover;
+                width: 100%;
+                border-radius: 5px;
+            }
+            @media (max-width: 640px) {
+                .property-image {
+                    max-height: 200px;
+                }
+            }
             </style>
         """, unsafe_allow_html=True)
         
         st.markdown('<div class="property-card">', unsafe_allow_html=True)
-        st.image(property.image_url, use_column_width=True)
+        st.markdown(f'<img src="{property.image_url}" class="property-image">', unsafe_allow_html=True)
         st.markdown(f"### {property.title}")
         st.markdown(f"### €{property.price:,.2f}")
         st.markdown(f"📍 **Location:** {property.location}")
