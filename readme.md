@@ -1,260 +1,131 @@
+# Real Estate Assistant 🏠
 
-# Real Estate Assistant
+A real estate assistant application built with Streamlit and PHIdata that helps qualify leads and match properties through natural conversation. The application includes lead capture, appointment booking, and AI-powered property search features.
 
-An AI-powered real estate assistant built with PHIdata that helps qualify leads and match properties through natural conversation.
+## Prerequisites
 
-## Features
+- Python 3.9 or higher
+- Docker (for database and workspace)
+- OpenAI API key
+- Google OAuth credentials (for authentication)
+- PHIdata CLI([1](https://docs.phidata.com/cli/installation))
 
-### 1. Lead Generation
-- Capture essential contact information
-  - Name
-  - Email/Phone (with validation)
-- Required before proceeding with property search
+## Local Development Setup
 
-### 2. Property Matching
-- Natural conversation flow for collecting preferences
-- Property filtering based on:
-  - Transaction type (Buy/Rent)
-  - Property type (House/Apartment/Field)
-  - Location
-  - Budget range
-  - Additional preferences
-- Display 4 best matches in carousel format
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd real-estate-assistant
+```
 
-### 3. Technical Stack
-- Framework: PHIdata
-- Frontend: Streamlit
-- Database: PostgreSQL with pgvector
-- Container: Docker
+2. **Create and activate virtual environment**
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+```
+
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Set up environment variables**
+Create a `.env` file in the root directory with:
+```bash
+OPENAI_API_KEY=your_openai_api_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+REDIRECT_URI=http://localhost:8501
+PHI_API_KEY=your_phi_api_key  # Get from PHIdata dashboard
+```
+
+5. **Start the PHI workspace**
+```bash
+# Start development workspace
+phi ws up
+
+# To start production workspace
+phi ws up prd
+```
+
+This command will:
+- Start the PostgreSQL database with pgvector
+- Run database migrations
+- Start the Streamlit application
+- Set up the development environment
+
+The application will be available at `http://localhost:8501`
+
+6. **Stop the workspace**
+```bash
+phi ws down  # For development
+phi ws down prd  # For production
+```
 
 ## Project Structure
 
-tree -L 3
-.
-├── Dockerfile
-├── LICENSE
-├── README.md
-├── agents
-│   ├── __init__.py
-│   ├── example.py
-│   ├── settings.py
-│   └── test
-│       ├── __init__.py
-│       └── example_agent.py
-├── api
-│   ├── __init__.py
-│   ├── main.py
-│   ├── routes
-│   │   ├── __init__.py
-│   │   ├── health.py
-│   │   ├── playground.py
-│   │   └── v1_router.py
-│   └── settings.py
-├── app
-│   ├── Home.py
-│   └── __init__.py
-├── db
-│   ├── README.md
-│   ├── __init__.py
-│   ├── alembic.ini
-│   ├── migrations
-│   │   ├── README
-│   │   ├── env.py
-│   │   ├── script.py.mako
-│   │   └── versions
-│   ├── session.py
-│   ├── settings.py
-│   └── tables
-│       ├── __init__.py
-│       └── base.py
-├── example.env
-├── pyproject.toml
-├── requirements.txt
-├── scripts
-│   ├── _utils.sh
-│   ├── auth_ecr.sh
-│   ├── build_dev_image.sh
-│   ├── build_prd_image.sh
-│   ├── entrypoint.sh
-│   ├── format.sh
-│   ├── generate_requirements.sh
-│   ├── install.sh
-│   ├── test.sh
-│   └── validate.sh
-├── tests
-│   ├── __init__.py
-│   └── evals
-│       └── test_haiku.py
-├── utils
-│   ├── __init__.py
-│   ├── dttm.py
-│   └── log.py
-└── workspace
-    ├── __init__.py
-    ├── __pycache__
-    │   └── settings.cpython-313.pyc
-    ├── dev_resources.py
-    ├── example_secrets
-    │   ├── dev_app_secrets.yml
-    │   ├── prd_app_secrets.yml
-    │   └── prd_db_secrets.yml
-    ├── prd_resources.py
-    ├── secrets
-    │   ├── dev_app_secrets.yml
-    │   ├── prd_app_secrets.yml
-    │   └── prd_db_secrets.yml
-    └── settings.py
+- `app/`: Main application code
+  - `Home.py`: Main entry point
+  - `pages/`: Different pages of the application
+  - `components/`: Reusable UI components
+  - `utils/`: Utility functions
+  - `models/`: Data models
+  - `assistants/`: AI assistant configurations
+- `db/`: Database configurations and migrations
+- `workspace/`: PHIdata workspace configurations([2](https://docs.phidata.com/reference/workspace))
+  - `dev_resources.py`: Development environment setup
+  - `prd_resources.py`: Production environment setup
+- `agents/`: AI agent configurations
 
-18 directories, 56 files
+## Features
 
-## Setup Instructions
+1. **Lead Capture**
+   - Contact information collection
+   - Form validation
+   - Google OAuth authentication
 
-1. **Create Virtual Environment**
-```bash
-python3 -m venv ~/.venvs/aienv
-source ~/.venvs/aienv/activate
-```
+2. **Appointment Booking**
+   - Schedule meetings with agents
+   - Time slot selection
+   - Appointment management
 
-2. **Install Dependencies**
-```bash
-pip install -U phidata openai pgvector streamlit "psycopg[binary]" sqlalchemy
-```
+3. **Property Search**
+   - AI-powered conversation interface
+   - Property filtering and matching
+   - Property carousel display
 
-3. **Run Database**
-```bash
-docker run -d \
-  -e POSTGRES_DB=ai \
-  -e POSTGRES_USER=ai \
-  -e POSTGRES_PASSWORD=ai \
-  -p 5532:5432 \
-  --name pgvector \
-  phidata/pgvector:16
-```
+## Development Notes
 
-4. **Set OpenAI API Key**
-```bash
-export OPENAI_API_KEY=your-key-here
-```
+- The application uses Streamlit for the frontend([3](https://docs.streamlit.io/))
+- PostgreSQL with pgvector is used for the database
+- PHIdata is used for AI assistant and agent management([4](https://docs.phidata.com/templates/ai-apps))
+- The project includes Docker configurations for production deployment
+- Workspace management is handled by PHIdata([5](https://docs.phidata.com/reference/workspace-settings))
 
-5. **Run Application**
-```bash
-streamlit run app/main.py
-```
+## Troubleshooting
 
-## Development Guidelines
-- Follow PEP 8 standards
-- Add docstrings for functions/classes
-- Test conversation flows thoroughly
-```
+1. **Workspace Issues**
+   - Check workspace logs: `phi ws logs`
+   - Verify workspace status: `phi ws status`
+   - Restart workspace: `phi ws restart`
 
-# PRD.md
-```markdown
-# Real Estate Assistant PRD
+2. **Database Connection Issues**
+   - Verify PostgreSQL is running: `docker ps`
+   - Check database credentials in workspace secrets
+   - Ensure migrations are up to date
 
-## 1. Overview
+3. **Authentication Issues**
+   - Verify Google OAuth credentials
+   - Check redirect URI configuration
+   - Ensure environment variables are set correctly
 
-### Purpose
-Create an AI-powered real estate assistant that captures leads and helps users find suitable properties through natural conversation.
+## Contributing
 
-### MVP Scope
-- Lead capture system
-- Natural language property search
-- Basic property matching
-- Property display interface
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-## 2. Functional Requirements
+## License
 
-### 2.1 Lead Capture (Priority: High)
-- **Required Fields:**
-  - Name
-  - Contact (email or phone)
-- **Validation:**
-  - Standard email format
-  - Standard phone number format
-- **Flow:**
-  - Must complete before property search
-  - Simple form interface
-  - Validation feedback
-
-### 2.2 Property Search (Priority: High)
-- **Conversation Flow:**
-  - Natural language interaction
-  - Progressive information gathering
-  - Flexible order of questions
-- **Search Criteria:**
-  - Transaction type (buy/rent)
-  - Property type (house/apartment/field)
-  - Location
-  - Budget range
-  - Number of bedrooms (optional)
-
-### 2.3 Results Display (Priority: High)
-- **Format:**
-  - Carousel display
-  - 4 properties maximum
-  - Responsive design
-- **Property Card:**
-  - Primary image
-  - Price
-  - Location
-  - Key features
-  - Square footage
-  - Bedrooms/bathrooms
-
-## 3. Technical Requirements
-
-### 3.1 Database Schema
-```sql
--- Properties Table
-CREATE TABLE properties (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255),
-    type VARCHAR(50),
-    transaction_type VARCHAR(20),
-    price DECIMAL(12,2),
-    location VARCHAR(255),
-    bedrooms INTEGER,
-    bathrooms INTEGER,
-    square_feet DECIMAL(10,2),
-    description TEXT,
-    image_url VARCHAR(255),
-    features JSONB
-);
-
--- Leads Table
-CREATE TABLE leads (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    contact VARCHAR(255),
-    contact_type VARCHAR(10),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### 3.2 Performance Requirements
-- Response time < 3 seconds
-- Support for concurrent users
-- Graceful error handling
-
-## 4. MVP Development Phases
-
-### Phase 1: Setup (Week 1)
-- [ ] Environment configuration
-- [ ] Database setup
-- [ ] Basic Streamlit interface
-
-### Phase 2: Lead Capture (Week 1)
-- [ ] Contact form implementation
-- [ ] Validation logic
-- [ ] Lead storage system
-
-### Phase 3: Property Search (Week 2)
-- [ ] Conversation flow
-- [ ] Property matching logic
-- [ ] Results display
-
-### Phase 4: Testing (Week 2)
-- [ ] Unit testing
-- [ ] Conversation flow testing
-- [ ] UI/UX refinement
-```
+This project is licensed under the Mozilla Public License Version 2.0 - see the LICENSE file for details.
