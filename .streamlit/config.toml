@@ -10,6 +10,7 @@ textColor = "#262730"  # Dark gray for text
 enableCORS = false
 enableXsrfProtection = true
 port = 8501  # Matches your dev_resources.py port configuration
+fileWatcherType = "auto"
 
 [browser]
 # Disable usage statistics
