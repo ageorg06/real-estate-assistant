@@ -4,6 +4,7 @@ import logging
 from app.assistants.real_estate import get_real_estate_assistant
 from app.utils.preferences import is_preferences_complete, display_matching_properties, get_matching_properties
 from typing import Optional
+from app.components.property_carousel import display_property_carousel
 
 logger = logging.getLogger(__name__)
 
@@ -73,19 +74,13 @@ def process_preferences_json(json_text: str) -> tuple[bool, str, Optional[str]]:
 
 def display_chat_interface():
     """Display and handle chat interface"""
-    # First display current properties if they exist
-    if st.session_state.current_properties:
-        with st.chat_message("assistant"):
-            st.markdown("### 🏠 Here are some properties that match your preferences:")
-            from app.components.property_carousel import display_property_carousel
-            display_property_carousel(st.session_state.current_properties)
-    
-    # Display chat messages
+    # Display chat messages first
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             if message.get("content"):
                 st.markdown(message["content"])
     
+    # Chat input
     if prompt := st.chat_input("Tell me about your property preferences..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         
@@ -103,8 +98,7 @@ def display_chat_interface():
                     messages=st.session_state.messages[-6:],
                     user_id=st.session_state.get('lead_data', {}).get('name', 'anonymous')
                 ):
-                    if isinstance(delta, str):
-                        full_response += delta
+                    full_response += delta
                 
                 # Process message and JSON separately but only display message
                 has_json, message, json_str = process_preferences_json(full_response)
@@ -133,4 +127,12 @@ def display_chat_interface():
                         "content": full_response
                     })
             except Exception as e:
-                st.error(f"Error: {str(e)}")
+                logger.error(f"Error processing response: {e}")
+                response_container.error("I encountered an error processing your request.")
+    
+    # Display property carousel at the bottom if properties exist
+    if st.session_state.current_properties:
+        st.markdown("---")  # Add a visual separator
+        with st.container():
+            st.markdown("### 🏠 Matching Properties")
+            display_property_carousel(st.session_state.current_properties)
